@@ -22,14 +22,18 @@ unique_p = []
 for i in p:
 	if not i in unique_p:
 		unique_p.append(i)
-p = unique_p
+#p = unique_p
 
+ignore = True
 input = None
+matches = 0
 pree = 0
-if (False and os.path.exists("stack.dat")):
+if (not ignore and os.path.exists("stack.dat")):
 	input = json.load(open("stack.dat", "r"))
 	field_size = input["size"]
 	#print(input)
+	matches = input["matches"]
+	p = input['tiles']
 	pree = input["loop"]
 
 def pig(tile, location, largest_match = False):
@@ -50,6 +54,7 @@ class loopTileGenerator():
 	def __init__(self, size=16):
 		self.ma = keyMatrix()
 		self.ma.size = size
+		self.matches = 0
 		self.stack = []
 		pass
 
@@ -90,7 +95,7 @@ class loopTileGenerator():
 		noo=[]
 		for j in range(self.ma.size):
 			for k in range(self.ma.size):
-				if ((j,k) in self.ma.keys and self.ma.keys[j,k] not in oo):
+				if (((j,k) in self.ma.keys) and (self.ma.keys[j,k] is not None) and (self.ma.keys[j,k] not in oo)):
 					oo.append(ma.keys[j,k])
 				elif ((j,k) not in self.ma.keys or self.ma.keys[j,k] is None):
 					noo.append((i,j))
@@ -118,7 +123,7 @@ class loopTileGenerator():
 					elif (tp == c):
 						st.append([(i,j),t])
 					#print(i,j,ma.get(i,j),c)
-		return [st, tiv]	
+		return [st, tiv]
 		
 	def _go(self, val):
 		cct = 0
@@ -126,10 +131,10 @@ class loopTileGenerator():
 		for i in range(500000000):
 			x, tiv = (self.getStack())
 			if (i % 100 == 0):
-				print(i + pree, len(self.stack))
+				print(matches, i + pree, len(stack))
 				#drwImg(tiv, self.ma.size).save("wang/" +str(i) +".png")
 			if (i% 1000 == 0):
-				json.dump({ "stack": self.stack, "state" : self.ma.save(), "size": self.ma.size, "loop": i+pree}, open("stack.dat", "w"))
+				json.dump({ "stack": self.stack, "state" : self.ma.save(), "size": self.ma.size, "loop": i+pree, "tiles" : p, "matches" : self.matches}, open("stack.dat", "w"))
 			ap = self.uniqueness()
 
 			#print(len(x), len(ap['noo']), len(p) - len(ap['oo']))
@@ -138,6 +143,7 @@ class loopTileGenerator():
 				oo = len(ap["oo"])
 				if (oo == len(p)):
 					print("Happy")
+					self.matches += 1
 					drwImg(tiv, self.ma.size).save("wang/" +str(i+pree) +".png")
 				else:
 					if ((oo)> si):
@@ -171,6 +177,7 @@ ma = ltg.ma
 if (input is not None):
 	input['state'] = json.dumps(input['state'])
 	ma.keys = json_loads_tuple_keys(input["state"])
+	self.matches = input['matches']
 	ltg.stack = input["stack"]
 
 from PIL import Image, ImageDraw, ImageFont
@@ -196,6 +203,7 @@ def drwImg(tivs, sz = 16):
 stack = ltg.stack
 
 # Stack down
+
 si = 0
 ltg._go(500000000)
 	
