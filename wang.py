@@ -178,7 +178,6 @@ if (__name__ == "__main__"):
 	json.dump(y, open("wang/saves/edges.dat", "w"))
 
 from PIL import Image, ImageDraw
-
 def tile(tData, size = 10):
 	size = size-1
 	polys = {
@@ -189,9 +188,12 @@ def tile(tData, size = 10):
 	}
 	im = Image.new("RGB", (size+1,size+1))
 	dr = ImageDraw.Draw(im)
-	for i, j in tData.items():
-		if (i in polys):
-			dr.polygon(polys[i], fill = cols[j], outline=(0))
+	if (tData is not None):
+		for i, j in tData.items():
+			if (i in polys):
+				dr.polygon(polys[i], fill = cols[j], outline=(0))
+	else:
+		pass
 	return im
 
 if (__name__ == "__main__"):
@@ -224,16 +226,17 @@ if (__name__ == "__main__"):
 
 	for i,j in ma.matrices.items():
 		#print(len(j.keys),"items in",i)
-#		im = Image.new("RGB", ((sz-1)*100,(sz-1)*100), (255,255,255))
+		#	im = Image.new("RGB", ((sz-1)*100,(sz-1)*100), (255,255,255))
 		for k,l in j.keys.items():
-			p = (400+(i[0]*100)+k[0], 300+(i[1]*100)+k[1])
-			c = (0,0,0)
-			if (l[N] == 1):
-				if (l[E] == 1):
-					if (l[W] == 1):
-						if (l[S] == 1):
-							#print(k)
-							c=(255,255,255)
+			if (l is not None):
+				p = (400+(i[0]*100)+k[0], 300+(i[1]*100)+k[1])
+				c = (0,0,0)
+				if (l[N] == 1):
+					if (l[E] == 1):
+						if (l[W] == 1):
+							if (l[S] == 1):
+								#print(k)
+								c=(255,255,255)
 			px[p] = c
 			
 	
