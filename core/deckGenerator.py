@@ -17,9 +17,6 @@ class deckGenerator():
 		for i,j in self.colours.items():
 			cols[i] = len(cols)+1
 			piccols[len(cols)] = j
-			
-		#print(cols)
-		#print(piccols)
 		
 		tile_list = []
 		for i in self.tiles:
@@ -49,5 +46,5 @@ q.addTile(North="green", East="green", South="blue", West="red")
 q.addTile(North="red", East="white", South="red", West="green")
 
 tiles, colours = (q.compile())
-print(tiles)
-print(colours)
+#print(tiles)
+#print(colours)
