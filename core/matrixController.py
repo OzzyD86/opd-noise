@@ -12,7 +12,9 @@ from imgProcessor import imgProcessor
 from core.keyMatrix import keyMatrix
 
 class matrixController():
-	def __init__(self, dir = "."):
+		def __init__(self, dir = ".", stack = False):
+		self.stack = []
+		self.stack_size = stack
 		self.dir = dir
 		self.loads = 0
 		self.matrices = {}
@@ -95,6 +97,12 @@ class matrixController():
 		if (m not in self.matrices):
 			self.load(m)
 		
+		if (self.stack_size is not False and v is not None):
+			self.stack.append((t,v))
+			
+			if (len(self.stack) > self.stack_size):
+				self.stack = self.stack[-self.stack_size:]
+				
 		self.matrices[m].set(t[0], t[1], v)
 		pass
 		
