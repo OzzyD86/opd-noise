@@ -4,6 +4,8 @@ E = "East"
 S = "South"
 W = "West"
 
+from core.deckGenerator import deckGenerator
+
 discard = []
 tile_sides = {N, E, S, W}
 t_assoc = {
@@ -13,15 +15,16 @@ t_assoc = {
 	E:((1,0),W)
 }
 ed = [(0,1),(1,0),(-1,0),(0,-1)]
-cols = {
-	1: (255,0,0),
-	2:(0,255,0),
-	3:(255,255,0),
-	4:(0,0,255),
-	#5:(255,0,255)
-}
+
+dg = deckGenerator()
+dg.addColour("red", (255,0,0))
+dg.addColour("green", (0,255,0))
+dg.addColour("yellow", (255,255,0))
+dg.addColour("blue", (0,0,255))
+#dg.addColour("pink", (255,0,255))
+dg.addTile(N = "red", E = "red", S = "red", W = "red")
+
 tt = [
-	{N:1, E:1, S:1, W:1},
 	{N:2, E:2, S:2, W:2},
 	{N:1, E:1, S:2, W:2},
 	{N:2, E:2, S:1, W:1},
@@ -45,8 +48,8 @@ def tileValidationChecker(tiles):
 				return False
 	return True
 
-#if not (tileValidationChecker(tt)):
-#	exit()
+if not (tileValidationChecker(tt)):
+	exit()
 
 def specialTiles(num):
 	tiles = []
@@ -83,7 +86,69 @@ class mc(matrixController):
 			}))
 			f.close()
 
-ma = mc("wang")
+class wangTilePlacer():
+	def __init__(self, stack_size = 0):
+		self.ma = mc("wang", 500)
+		self.stack = []
+		self.edges = [(0,0)]
+	
+	def place(self, where, what):
+		print(where)
+		ty = []
+		if (where not in self.edges):
+			return False
+		self.edges.remove(where)
+		self.ma.set(*where, what)
+		for j in ed:
+			i =(where[0]+j[0], where[1]+j[1])
+					#pl = gat(i)
+					#if ((pl is not None)):
+					#	if (len(pl) == 0):
+					#		print("This doesn't work")
+					#		pla = False
+					#		ma.set(*ch_gr, None)
+			if ((self.ma.get(*i) is None) and (not i in ty) and (not i in y)):
+				ty.append(i)
+		self.edges += ty
+		return True
+		
+	def unplace(self, where):
+		self.ma.set(*where, None)
+		self.edges.append(where)
+		for j in ed:
+			i =(where[0]+j[0], where[1]+j[1])
+			if (i in self.edges):
+				l=0
+				for sj in ed:
+					k =(where[0]+j[0]+sj[0], where[1]+j[1]+sj[1])
+					if (k in self.edges or self.ma.get(*k) is None):
+						l+=1
+				if (l == 4):
+					self.edges.remove(i)
+		return True
+	
+	def placeInGrid(self, tile, location, largest_match = False):
+		mat=0
+		for i,k in t_assoc.items():
+			check = (location[0]+k[0][0],location[1]+k[0][1])
+			ck = self.ma.get(*check)
+			if (ck is not None):
+				mat+=1
+				if (ck[k[1]] != tile[i]):
+					return False
+		if (largest_match):
+			return mat
+		return True
+		pass
+	
+wtp = wangTilePlacer()
+ma = wtp.ma
+wtp.edges = y
+
+#wtp.place({}, (0,0))
+#wtp.unplace((0,0))
+
+_, cols = dg.compile()
 
 def makeTiles(num):
 	tiles = []
@@ -107,20 +172,6 @@ def makeDistinctTiles(num):
 	return tiles
 #print(tiles)
 
-def pig(tile, location, largest_match = False):
-	mat=0
-	for i,k in t_assoc.items():
-		check = (location[0]+k[0][0],location[1]+k[0][1])
-		ck = ma.get(*check)
-		if (ck is not None):
-			#print(ck)
-			mat+=1
-			if (ck[k[1]] != tile[i]):
-				return False
-	if (largest_match):
-		return mat
-	return True
-
 tiles = ofdc + makeTiles(256*5)
 print("Placing",len(tiles),"tiles.")
 prb = True
@@ -136,7 +187,7 @@ def placeTiles(tiles, quick = True):
 		nn=0
 		ls = []
 		for k in y:
-			p = pig(ch_ti, k, prb)
+			p = wtp.placeInGrid(ch_ti, k, prb)
 			if (p is not False):
 				if (prb):
 					if (p > nn):
@@ -151,31 +202,12 @@ def placeTiles(tiles, quick = True):
 				
 		if (len(ls) > 0):
 			ch_gr = random.choice(ls)
-			y.remove(ch_gr)
-
-			ma.set(*ch_gr, ch_ti)
-			for j in ed:
-				i =(ch_gr[0]+j[0], ch_gr[1]+j[1])
-				#print(ma.get(*i))
-				if ((ma.get(*i) is None) and (not i in y)):
-					y.append(i)
+			#print(ch_gr)
+			wtp.place(ch_gr, ch_ti)
 		else:
 			print("Discarded")
 			discarded.append(ch_ti)
 	return discarded
-
-if (__name__ == "__main__"):
-	discard = placeTiles(tiles, qwik)
-	print(len(discard),"discarded items.")
-	ct = 0
-	while(len(discard) > 0 and ct < 5):
-		ct+= 1
-		discard = placeTiles(discard, False)
-		print(len(discard),"discarded items in sequence",ct,".")
-
-	ma.save()
-	json.dump(discard, open("wang/saves/discards.dat", "w"))
-	json.dump(y, open("wang/saves/edges.dat", "w"))
 
 from PIL import Image, ImageDraw
 def tile(tData, size = 10):
@@ -197,7 +229,19 @@ def tile(tData, size = 10):
 	return im
 
 if (__name__ == "__main__"):
-	im = Image.new("RGB", (800,600), (255,255,255))
+	discard = placeTiles(tiles, qwik)
+	print(len(discard),"discarded items.")
+	ct = 0
+	while(len(discard) > 0 and ct < 5):
+		ct+= 1
+		discard = placeTiles(discard, False)
+		print(len(discard),"discarded items in sequence",ct,".")
+
+	ma.save()
+	json.dump(discard, open("wang/saves/discards.dat", "w"))
+	json.dump(y, open("wang/saves/edges.dat", "w"))
+
+#	im = Image.new("RGB", (800,600), (255,255,255))
 	im2 = Image.new("RGB", (800,600), (192,128,255))
 	rec = ImageDraw.Draw(im2)
 	for x in range(-4,4):
@@ -239,8 +283,6 @@ if (__name__ == "__main__"):
 								c=(255,255,255)
 			px[p] = c
 			
-	
-if (__name__ == "__main__"):
 	for i in y:
 		p = (400+(i[0]*1)+0, 300+(i[1]*1)+0)
 		px[p] = (255,0,0)
