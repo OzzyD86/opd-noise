@@ -59,10 +59,6 @@ def specialTiles(num):
 	
 from core.matrixController import matrixController
 #grid = {}
-y = [(0,0)]
-
-if (os.path.exists("wang/saves/edges.dat")):
-		y = json.load(open("wang/saves/edges.dat", "r"))
 
 ofdc = []
 if (os.path.exists("wang/saves/discards.dat")):
@@ -92,29 +88,38 @@ class wangTilePlacer():
 		self.stack = []
 		self.edges = [(0,0)]
 	
-	def place(self, where, what):
-		print(where)
+	def place(self, where, what, anc = {}):
 		ty = []
-		if (where not in self.edges):
-			return False
-		self.edges.remove(where)
+		#if (where not in self.edges):
+		#	return False
+		if (where in self.edges):
+			print("Remove", where, "from edges")
+			self.edges.remove(where)
+			print("Edges is now", self.edges)
+		self.stack.append([where, what, anc])
 		self.ma.set(*where, what)
 		for j in ed:
-			i =(where[0]+j[0], where[1]+j[1])
+			i = tuple([where[0]+j[0], where[1]+j[1]])
 					#pl = gat(i)
 					#if ((pl is not None)):
 					#	if (len(pl) == 0):
 					#		print("This doesn't work")
 					#		pla = False
 					#		ma.set(*ch_gr, None)
-			if ((self.ma.get(*i) is None) and (not i in ty) and (not i in y)):
-				ty.append(i)
+			if ((self.ma.get(*i) is None) and (list(i) not in ty) and (list(i) not in self.edges)):
+				#print(i, "is not in", ty)
+				#print(i, "is not in", self.edges)
+				#print("Add", i, "to edges")
+				ty.append(tuple(i))
 		self.edges += ty
 		return True
 		
 	def unplace(self, where):
 		self.ma.set(*where, None)
-		self.edges.append(where)
+		if (where not in self.edges):
+#			print("Remove", where, "from edges")
+
+			self.edges.append(where)
 		for j in ed:
 			i =(where[0]+j[0], where[1]+j[1])
 			if (i in self.edges):
@@ -124,8 +129,16 @@ class wangTilePlacer():
 					if (k in self.edges or self.ma.get(*k) is None):
 						l+=1
 				if (l == 4):
+#					print("Remove", i, "from edges")
 					self.edges.remove(i)
+#					print("Edges is now", self.edges)
 		return True
+		
+	def rollback(self):
+		#print("Rollback")
+		i = self.stack.pop()
+		self.unplace(i[0])
+		return i
 	
 	def placeInGrid(self, tile, location, largest_match = False):
 		mat=0
@@ -143,7 +156,12 @@ class wangTilePlacer():
 	
 wtp = wangTilePlacer()
 ma = wtp.ma
-wtp.edges = y
+
+if (os.path.exists("wang/saves/edges.dat")):
+		wtp.edges = json.load(open("wang/saves/edges.dat", "r"))
+
+if (os.path.exists("wang/saves/stack.dat")):
+		wtp.stack = json.load(open("wang/saves/stack.dat", "r"))
 
 #wtp.place({}, (0,0))
 #wtp.unplace((0,0))
@@ -172,12 +190,86 @@ def makeDistinctTiles(num):
 	return tiles
 #print(tiles)
 
+def pig(tile, location, largest_match = False):
+	mat=0
+	for i,k in t_assoc.items():
+		check = (location[0]+k[0][0],location[1]+k[0][1])
+		ck = ma.get(*check)
+		if (ck is not None):
+			#print(ck)
+			mat+=1
+			if (ck[k[1]] != tile[i]):
+				return False
+	if (largest_match):
+		return mat
+	return True
+
+def canPlaceAt(loc = (0,0)):
+	o = []
+	if (wtp.ma.get(*loc) is not None):
+		return False
+	for i in tt:
+		#p = pig(i, loc)
+		#print(p)
+		if (pig(i, loc)):
+			#print(i)
+			o.append(i)
+	return o
+
 tiles = ofdc + makeTiles(256*5)
 print("Placing",len(tiles),"tiles.")
 prb = True
 qwik = False
 
+def placeTile():
+	print("Building tile expectations...")
+	op = {}
+	for i in wtp.edges:
+		tm = canPlaceAt(i)
+		if (tm is False):
+			print("Is there something at",i,"?")
+		else:
+			if (len(tm) in op):
+				op[len(tm)].append(i)
+			else:
+				op[len(tm)] = [i]
+			print(len(tm), "items can be placed at", i)
+	print("Done.")
+	
+	# Choose the item with the smallest options
+	p = sorted(list(op.keys()))
+	
+	# Choose an option
+	t_loc = op[p[0]].pop()
+	print(t_loc)
+	
+	# Get a tile
+	pl = canPlaceAt(t_loc)
+	ttp = random.choice(pl)
+	#pl.removr(ttp)
+	rem = pl.remove(ttp)
+	# Place it
+	if (not pig(ttp, t_loc)):
+		print("What's happened?")
+		exit()
+	wtp.place(t_loc, ttp, pl)
+	
+	for i in ed:
+		j =(t_loc[0]+i[0], t_loc[1]+i[1])
+		if (not wtp.ma.get(*j)):
+			if (len(canPlaceAt(j)) == 0):
+				print("Neighbour cannot be placed")
+				print(wtp.rollback())
+				exit()
+				break
+	#exit()
+
 def placeTiles(tiles, quick = True):
+	placeTile()
+	return []
+	# New code here
+	ti = 0
+
 	discarded = []
 	#print("Run")
 	while(len(tiles) > 0):
@@ -239,7 +331,8 @@ if (__name__ == "__main__"):
 
 	ma.save()
 	json.dump(discard, open("wang/saves/discards.dat", "w"))
-	json.dump(y, open("wang/saves/edges.dat", "w"))
+	json.dump(wtp.edges, open("wang/saves/edges.dat", "w"))
+	json.dump(wtp.stack, open("wang/saves/stack.dat", "w"))
 
 #	im = Image.new("RGB", (800,600), (255,255,255))
 	im2 = Image.new("RGB", (800,600), (192,128,255))
@@ -283,7 +376,7 @@ if (__name__ == "__main__"):
 								c=(255,255,255)
 			px[p] = c
 			
-	for i in y:
+	for i in wtp.edges:
 		p = (400+(i[0]*1)+0, 300+(i[1]*1)+0)
 		px[p] = (255,0,0)
 		
