@@ -287,7 +287,7 @@ def down(point = None):
 		
 	ls = canPlaceAt(t_loc)
 	random.shuffle(ls)
-	
+	rb = None
 	while (len(ls) > 0):
 		i = ls.pop(0)
 		print("Trying",i)
@@ -302,18 +302,18 @@ def down(point = None):
 			if (not wtp.ma.get(*j) and check):
 				if (len(canPlaceAt(j)) == 0):
 					print("Neighbour cannot be placed")
-					print(wtp.rollback())
+					rb = wtp.rollback()
 					check = False
 		if (check):
-			return {"ret":True, "loc":t_loc}
-	return {"ret": False, "loc":t_loc}
+			return {"ret":True, "loc":t_loc, "rb" : rb}
+	return {"ret": False, "loc":t_loc, "rb": rb}
 
 
 def placeTile():
 	op = down()
 	
 	#if op return is true, item has been placed, otherwise no
-	
+	print(op)
 	if (not op["ret"]):
 		rblist = []
 		satisfied = False
@@ -322,6 +322,7 @@ def placeTile():
 		while (supersatisfied is False):
 			
 			rblist += wtp.rollbackTo(jorth)
+			print("RBList is now:", rblist)
 			print("=== RIGHT ===")
 			print("Tried", op["loc"])
 			print("Removed these:")
@@ -371,6 +372,7 @@ def placeTile():
 							jorth = orth(p[0])
 							break
 							#raise Exception("F04: This is legitimate panic time")
+			print("RBList is still:", rblist)
 				
 		return
 	
