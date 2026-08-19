@@ -1,4 +1,5 @@
 import random, os, json
+import traceback
 N = "North"
 E = "East"
 S = "South"
@@ -167,7 +168,7 @@ def imageTileGrid(loc=(-8,-8), sz=(16,16)):
 			dr.text((((k[0]-loc[0])*20)+10-int(pd[2]/2),(k[1]-loc[1])*20+10-int(pd[3]/2)), str(i),font=f,fill=(0,0,0))
 	return im
 	
-def showWorkings(workings = {}):
+def showWorkings(workings = {}, Trace = True):
 	sc = [None, None, None, None]
 	for i in buildExpectations().values():
 		for j in i:
@@ -203,6 +204,15 @@ def showWorkings(workings = {}):
 				pd = dr.textbbox((0,0), str(i),font=f)
 				dr.text((((k[0]-sc[0])*20)+10-int(pd[2]/2),(k[1]-sc[1])*20+10-int(pd[3]/2)), str(i),font=f,fill=(0,0,0))
 
+	if (Trace):
+		v = 0
+		for i in traceback.extract_stack():
+			li = str(i)
+			pd = dr.textbbox((0,0), str(li),font=f)
+			dr.text((0,v), str(li),font=f,fill=(0,0,0))
+			v+= pd[2]
+			#print(i)
+		#exit(1)
 	#im.save("wang/xWang.png")
 	return im
 
@@ -637,11 +647,10 @@ def canima(loc, ls):
 	return placed
 
 def do():
-	global workings
+	global workings, d, rb_mapping_list
 	print("Let's do this")
-	
 	print("Initial depth down...")
-	global d, rb_mapping_list
+
 	d = down()
 	showWorkings({"selected" : [d['loc']]}).save("wang/workingsOut-" + str(workings) + ".png")
 	workings += 1
@@ -655,11 +664,11 @@ def do():
 		stack = orth(d['loc']) # Prepare for rollback!
 		#rb_core_answer = []
 		satisfied = False
-		
+		rb_mapping_list = []
 		while (not satisfied):
 			rb_core_answer = wtp.rollbackTo(stack)
 			print(rb_core_answer)
-			rb_mapping_list = []
+			
 			for i in rb_core_answer:
 				rbstack.append(i)
 				rb_mapping_list.append(i[0])
@@ -704,14 +713,15 @@ def do():
 								placed = canima(a[0], y)
 								
 								if (placed is False):
-									rb_core_answer.append([a[0], [], []])
+									rbstack.append([a[0], [], []])
 									stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
 									satisfied = False
 									break							
 									
 						#raise Exception("F01: Success, carry on") # But I've not written that yet
 					else:
-						placed = False
+						placed = canima(a[0], a[2])
+						'''placed = False
 						while (len(a[2]) > 0):
 							b = a[2].pop(0)	# Take the next tile for this square
 							if (pig(b, a[0])):
@@ -724,7 +734,7 @@ def do():
 									workings += 1
 									break
 								else:
-									wtp.rollback()
+									wtp.rollback()'''
 						if (placed is False and grid_changed is False):
 							rbstack.append([a[0], [], []])
 							stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
@@ -758,13 +768,18 @@ def do():
 										wtp.rollback()
 										
 							if (placed is False):
-								rb_core_answer.append([a[0], [], []])
+								rbstack.append([a[0], [], []])
 								stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
 								satisfied = False
 								break
 						#	raise Exception("F02: Eh? I'm here and the grid's not changed!") # But I've not written that yet
 					else:
 						# If the grid has NOT changed, then we should rollback further with THIS tile as the orth
+						#rbstack.append([a[0], [], []]) # This bit of code again?
+						#stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
+						#satisfied = False
+						#break
+						
 						raise Exception("F03: Unhandled this part") # But I've not written that yet
 				pass
 
