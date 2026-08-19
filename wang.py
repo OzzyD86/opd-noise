@@ -210,7 +210,7 @@ def showWorkings(workings = {}, Trace = True):
 			li = str(i)
 			pd = dr.textbbox((0,0), str(li),font=f)
 			dr.text((0,v), str(li),font=f,fill=(0,0,0))
-			v+= pd[2]
+			v+= (pd[3]-pd[1])
 			#print(i)
 		#exit(1)
 	#im.save("wang/xWang.png")
@@ -683,7 +683,7 @@ def do():
 				# NOT JUST YET
 				showWorkings({"selected" : [d['loc']], "rbs": rb_mapping_list, "focus": [a[0]]}).save("wang/workingsOut-" + str(workings) + ".png")
 				workings += 1
-				# a[1] is current value, this is valid but not correct
+				# a[1] is current value, this should be valid but not correct
 				if (len(a[2]) > 0):
 					print("a[2] is", a[2])
 					# This is a list of new values to try. If these pass, then let the whole loop continue
@@ -716,7 +716,9 @@ def do():
 									rbstack.append([a[0], [], []])
 									stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
 									satisfied = False
-									break							
+									break		
+								else:
+									grid_changed = True
 									
 						#raise Exception("F01: Success, carry on") # But I've not written that yet
 					else:
@@ -740,7 +742,10 @@ def do():
 							stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
 							satisfied = False
 							break # This will break the rb_core_answer loop as desired
-							raise Exception("F04: We need to rollback again") # But I've not written that yet
+						elif (placed is False and grid_changed is True):
+							raise Exception("F04: Does this happen? How do I resolve this?") # But I've not written that yet
+						else:
+							grid_changed = True
 				else:
 					# This is where the heartache starts: 
 					if (grid_changed):
@@ -749,8 +754,9 @@ def do():
 						if (len(y) == 0):
 							raise Exception("F05: What now?") # But I've not written that yet
 						else:
-							placed = False
-							while (len(y) > 0):
+							placed = canima(a[0], y)
+							#False
+							'''while (len(y) > 0):
 								# I've copied this from above
 								b = y.pop()
 
@@ -765,20 +771,22 @@ def do():
 										workings += 1
 										break
 									else:
-										wtp.rollback()
+										wtp.rollback()'''
 										
 							if (placed is False):
 								rbstack.append([a[0], [], []])
 								stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
 								satisfied = False
 								break
+							else:
+								grid_changed = True
 						#	raise Exception("F02: Eh? I'm here and the grid's not changed!") # But I've not written that yet
 					else:
-						# If the grid has NOT changed, then we should rollback further with THIS tile as the orth
-						#rbstack.append([a[0], [], []]) # This bit of code again?
-						#stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
-						#satisfied = False
-						#break
+						# If the grid has NOT changed, and the length of remaining a is 0 then we should rollback further with THIS tile as the orth
+						rbstack.append([a[0], [], []]) # This bit of code again?
+						stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
+						satisfied = False
+						break
 						
 						raise Exception("F03: Unhandled this part") # But I've not written that yet
 				pass
