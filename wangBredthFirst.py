@@ -322,8 +322,22 @@ class wangTilePlacer():
 			edge = self.getEdges(grid)
 		
 		#print(edge)
+		
+		d = None
+		ls = []
+		#for i in edge:
+		#	p = (len(canPlaceAt(gr, i)))
+		#	if (d is None or (p > 0 and p < d)):
+		#		d = p
+		#		ls = [i]
+		#	elif (p == d):
+		#		ls.append(i)
+				
+		#print(d, ls)
+		
 		r = random.choice(edge)
-		#print(r)
+		#print("r:",r)
+		
 		d = canPlaceAt(grid, r)
 
 		out = []
@@ -367,7 +381,7 @@ class gridManager():
 		
 	def load(self, grid):
 		if (grid in self.grids):
-			print("Grid already loaded")
+			#print("Grid already loaded")
 			return False
 			
 		if (os.path.exists(self.path + "grids-" + str(grid) + ".dat")):
@@ -382,7 +396,8 @@ class gridManager():
 			
 	def findAllGrids(self):
 		c=0
-		while(os.path.exists("wang/saves/grids-"+str(c)+".dat")):
+		
+		while(os.path.exists("wang/saves/grids-"+str(c)+".dat") or c in self.grids):
 			c+= 1
 		return c
 
@@ -415,7 +430,7 @@ class gridManager():
 	def listGridSizes(self):
 		d = {}
 		for i in range(self.findAllGrids()):
-			#print(i)
+			
 			self.load(i)
 			d[i] = len(self.grids[i])
 		return d
@@ -426,6 +441,15 @@ gm = gridManager()
 #gm.grids[0] = [{}]
 print(gm.findAllGrids())
 gm.load(0)
+print(list(gm.listGridSizes().keys()))
+
+if (0 not in list(gm.listGridSizes().keys())):
+	print("No")
+	gm.grids[0] = [{}]
+
+#print(gm.grids)
+#print(gm.listGridSizes())
+tileMax = None	
 ct = 0
 while (ct < 100 and gm.listGridSizes()[0] > 0 ):
 	for i in range(gm.listGridSizes()[0]):
@@ -437,6 +461,10 @@ while (ct < 100 and gm.listGridSizes()[0] > 0 ):
 				ign = True
 				break
 		if (ign):
+			if (tileMax is None or len(gr) > tileMax):
+				tileMax = len(gr) 
+				imageTileGrid(gr, (-32, -32), (64, 64)).save("wang/saves/failed-" + str(tileMax)+".png")
+
 			pass
 		#	print("I'm ignoring this grid as it is impossible")
 		else:
@@ -444,7 +472,7 @@ while (ct < 100 and gm.listGridSizes()[0] > 0 ):
 	ct+=1
 	print(ct)
 
-imageTileGrid(gr).save("wang/saves/help.png")
+imageTileGrid(gr, (-32, -32), (64, 64)).save("wang/saves/help.png")
 	
 print(gm.listGridSizes())
 #def saveAllGrids(grids):
