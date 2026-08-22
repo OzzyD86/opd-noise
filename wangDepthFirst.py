@@ -5,15 +5,6 @@ E = "East"
 S = "South"
 W = "West"
 
-from datetime import datetime
-print (datetime.now())
-start = datetime.now()
-def timely(start, now, progress, total):
-	elap = (now-start)
-	
-	return (total - progress)*(elap/progress)
-	
-print(timely(start, datetime.now(),1,2))
 import core.deckGenerator
 discard = []
 
@@ -178,13 +169,11 @@ def imageTileGrid(grid, loc=(-8,-8), sz=(16,16)):
 
 	return im
 	
-def showWorkings(grid, workings = {}, Trace = False):
+def showWorkings(workings = {}, Trace = True):
 	sc = [None, None, None, None]
-	#print(grid)
-	be = wtp.getEdges(grid)
-	for i in be:
-			#print(i)
-			j = i
+	be = buildExpectations()
+	for i in be.values():
+		for j in i:
 			if (sc[0] is None or j[0] < sc[0]):
 				sc[0]= j[0]
 			if (sc[2] is None or j[0] > sc[2]):
@@ -196,8 +185,7 @@ def showWorkings(grid, workings = {}, Trace = False):
 			#print(j)
 
 	sz = [sc[2]-sc[0]+1, sc[3]-sc[1]+1]
-	im = imageTileGrid(grid, (sc[0], sc[1]), (sz[0], sz[1]))
-	return im
+	im = imageTileGrid((sc[0], sc[1]), (sz[0], sz[1]))
 	im = Image.new("RGB", ((20*sz[0])+1,(20*sz[1])+1), (255,255,255))
 	dr = ImageDraw.Draw(im)
 	c = [(255,127,127),(255,255,127), (127, 255, 127)]
@@ -264,31 +252,7 @@ def doesThisWorkHere(grid, loc):
 				#rb = wtp.rollback()
 				return False
 	return True
-
-def getAR(grid):
-	# ive copied this code I could refactor it
-	sc = [None, None, None, None]
-	#print(grid)
-	be = wtp.getEdges(grid)
-	for i in be:
-			#print(i)
-			j = i
-			if (sc[0] is None or j[0] < sc[0]):
-				sc[0]= j[0]
-			if (sc[2] is None or j[0] > sc[2]):
-				sc[2]= j[0]
-			if (sc[1] is None or j[1] < sc[1]):
-				sc[1]= j[1]
-			if (sc[3] is None or j[1] > sc[3]):
-				sc[3]= j[1]
-			#print(j)
-	if (sc[0] is None):
-		return 1
-	sz = [sc[2]-sc[0]+1, sc[3]-sc[1]+1]
-	#print(sz)
-	if (sz[1] == 0):
-		return 1
-	return sz[0]/sz[1]
+	
 class wangTilePlacer():
 	def __init__(self, stack_size = 0):
 		self.ma = mc("wang")
@@ -358,33 +322,8 @@ class wangTilePlacer():
 			edge = self.getEdges(grid)
 		
 		#print(edge)
-		
-		d = None
-		ls = []
-		for i in edge:
-			#p = (len(canPlaceAt(gr, i)))
-			p = (abs(i[0]) + abs(i[1]))
-			if (d is None or (p >= 0 and p < d)):
-				d = p
-				ls = [i]
-			elif (p == d):
-				ls.append(i)
-		
-		d = None
-		lls = []
-		for i in ls:
-			p = (len(canPlaceAt(gr, i)))
-			#p = (abs(i[0]) + abs(i[1]))
-			if (d is None or (p > 0 and p < d)):
-				d = p
-				lls = [i]
-			elif (p == d):
-				lls.append(i)
-		#print(d, ls)
-		
-		r = random.choice(lls)
-		#print("r:",r)
-		
+		r = random.choice(edge)
+		#print(r)
 		d = canPlaceAt(grid, r)
 
 		out = []
@@ -428,7 +367,7 @@ class gridManager():
 		
 	def load(self, grid):
 		if (grid in self.grids):
-			#print("Grid already loaded")
+			print("Grid already loaded")
 			return False
 			
 		if (os.path.exists(self.path + "grids-" + str(grid) + ".dat")):
@@ -443,8 +382,7 @@ class gridManager():
 			
 	def findAllGrids(self):
 		c=0
-		
-		while(os.path.exists("wang/saves/grids-"+str(c)+".dat") or c in self.grids):
+		while(os.path.exists("wang/saves/grids-"+str(c)+".dat")):
 			c+= 1
 		return c
 
@@ -477,7 +415,7 @@ class gridManager():
 	def listGridSizes(self):
 		d = {}
 		for i in range(self.findAllGrids()):
-			
+			#print(i)
 			self.load(i)
 			d[i] = len(self.grids[i])
 		return d
@@ -488,19 +426,8 @@ gm = gridManager()
 #gm.grids[0] = [{}]
 print(gm.findAllGrids())
 gm.load(0)
-print(list(gm.listGridSizes().keys()))
-
-if (0 not in list(gm.listGridSizes().keys())):
-	print("No")
-	gm.grids[0] = [{}]
-
-#print(gm.grids)
-#print(gm.listGridSizes())
-tileMax = None
-x=0
 ct = 0
-tot=60
-while (ct < tot and gm.listGridSizes()[0] > 0 ):
+while (ct < 100 and gm.listGridSizes()[0] > 0 ):
 	for i in range(gm.listGridSizes()[0]):
 		ign = False
 		gr = gm.grids[0].pop()
@@ -510,26 +437,14 @@ while (ct < tot and gm.listGridSizes()[0] > 0 ):
 				ign = True
 				break
 		if (ign):
-			if (tileMax is None or len(gr) > tileMax):
-				tileMax = len(gr) 
-				print("Saved fail", tileMax)
-				showWorkings(gr, {}).save("wang/saves/failed-" + str(tileMax)+".png")
 			pass
 		#	print("I'm ignoring this grid as it is impossible")
 		else:
-			#d = getAR(gr)
-			#if (d> 5 or d < 0.2):
-				#print("d:",d)
-				#print("Grid aspect ratio too stretched")
-			#else:
 			gm.appendMany(wtp.step(gr))
-		x+=1
 	ct+=1
-	if (ct%10==0):
-		print(x, ct, timely(start, datetime.now(), ct, tot))
-		#print(ct)
+	print(ct)
 
-imageTileGrid(gr, (-32, -32), (64, 64)).save("wang/saves/help.png")
+imageTileGrid(gr).save("wang/saves/help.png")
 	
 print(gm.listGridSizes())
 #def saveAllGrids(grids):
