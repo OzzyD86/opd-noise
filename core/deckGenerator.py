@@ -37,7 +37,7 @@ q.addTile(North="red", East="green", South="green", West="green")
 q.addTile(North="white", East="blue", South="red", West="blue")
 
 q.addTile(North="blue", East="blue", South="white", West="blue")
-q.addTile(North="white", East="white", South="white", West="red")
+q.addTile(North="white", East="white", South="red", West="white")
 q.addTile(North="red", East="green", South="blue", West="white")
 
 q.addTile(North="blue", East="white", South="blue", West="red")
