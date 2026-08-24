@@ -5,6 +5,15 @@ E = "East"
 S = "South"
 W = "West"
 
+from datetime import datetime
+print (datetime.now())
+start = datetime.now()
+def timely(start, now, progress, total):
+	elap = (now-start)
+	
+	return (total - progress)*(elap/progress)
+	
+print(timely(start, datetime.now(),1,2))
 import core.deckGenerator
 discard = []
 
@@ -27,7 +36,7 @@ def makeDistinctTiles():
 	return tiles
 cols = core.deckGenerator.colours
 tt = core.deckGenerator.tiles
-#tt.pop(0)
+
 dg = core.deckGenerator.deckGenerator()
 dg.addColour("red", (255,0,0))
 dg.addColour("green", (0,255,0))
@@ -89,7 +98,8 @@ except:
 	f = ImageFont.load_default() #_imagefont()
 
 def buildExpectations():
-#	print("Building tile expectations...")
+	raise Exception("Not sorted")
+	print("Building tile expectations...")
 	op = {}
 	for i in wtp.edges:
 		tm = canPlaceAt(i)
@@ -104,7 +114,7 @@ def buildExpectations():
 			else:
 				op[len(tm)] = [i]
 			#print(len(tm), "items can be placed at", i)
-#	print("Done.")
+	print("Done.")
 	return op
 
 def tile(tData, size = 10):
@@ -126,50 +136,55 @@ def tile(tData, size = 10):
 		pass
 	return im
 
-def pig(tile, location, largest_match = False):
+def pig(grid, tile, location, largest_match = False):
 	mat=0
 	for i,k in t_assoc.items():
 		check = (location[0]+k[0][0],location[1]+k[0][1])
-		ck = ma.get(*check)
-		if (ck is not None):
+		if (check in grid):
 			#print(ck)
 			mat+=1
-			if (ck[k[1]] != tile[i]):
+			if (grid[check][k[1]] != tile[i]):
 				return False
 	if (largest_match):
 		return mat
 	return True
 	
-def canPlaceAt(loc = (0,0)):
+def canPlaceAt(grid, loc = (0,0)):
 	o = []
-	if (wtp.ma.get(*loc) is not None):
+	if (loc in grid):
 		return False
 	for i in tt:
-		if (pig(i, loc)):
+		if (pig(grid, i, loc)):
 			o.append(i)
 	return o
 	
-def imageTileGrid(loc=(-8,-8), sz=(16,16)):
+def imageTileGrid(grid, loc=(-8,-8), sz=(16,16)):
 	im = Image.new("RGBA", ((20*sz[0])+1,(20*sz[1])+1), (255,255,255, 255))
 	dr = ImageDraw.Draw(im)
 	for i in range(sz[0]):
 		for j in range(sz[1]):
-			if (ma.get(loc[0]+i,loc[1]+j) is not None):
-				k = tile(ma.get(loc[0]+i,loc[1]+j), 21)
+			if ((loc[0]+i,loc[1]+j) in grid):
+				k = tile(grid[(loc[0]+i,loc[1]+j)], 21)
 				pos = (int(i* (21-1)), int(j* (21-1)))
 				im.paste(k, pos)
-	for i,j in buildExpectations().items():
-		for k in j:
-			pd = dr.textbbox((0,0), str(i),font=f)
+				
+	for i in wtp.getEdges(grid):
+		#print(i)
+		p = (len(canPlaceAt(grid, i)))
+	#	for k in j:
+		pd = dr.textbbox((0,0), str(p),font=f)
 			#print(p)
-			dr.text((((k[0]-loc[0])*20)+10-int(pd[2]/2),(k[1]-loc[1])*20+10-int(pd[3]/2)), str(i),font=f,fill=(0,0,0))
+		dr.text((((i[0]-loc[0])*20)+10-int(pd[2]/2),(i[1]-loc[1])*20+10-int(pd[3]/2)), str(p),font=f,fill=(0,0,0))
+
 	return im
 	
-def showWorkings(workings = {}, Trace = True):
+def showWorkings(grid, workings = {}, Trace = False):
 	sc = [None, None, None, None]
-	be = buildExpectations()
-	for i in be.values():
-		for j in i:
+	#print(grid)
+	be = wtp.getEdges(grid)
+	for i in be:
+			#print(i)
+			j = i
 			if (sc[0] is None or j[0] < sc[0]):
 				sc[0]= j[0]
 			if (sc[2] is None or j[0] > sc[2]):
@@ -181,7 +196,8 @@ def showWorkings(workings = {}, Trace = True):
 			#print(j)
 
 	sz = [sc[2]-sc[0]+1, sc[3]-sc[1]+1]
-	im = imageTileGrid((sc[0], sc[1]), (sz[0], sz[1]))
+	im = imageTileGrid(grid, (sc[0], sc[1]), (sz[0], sz[1]))
+	return im
 	im = Image.new("RGB", ((20*sz[0])+1,(20*sz[1])+1), (255,255,255))
 	dr = ImageDraw.Draw(im)
 	c = [(255,127,127),(255,255,127), (127, 255, 127)]
@@ -233,39 +249,58 @@ def orth(loc=(0,0)):
 	for qa in ed:
 		jj.append((loc[0]+qa[0], loc[1]+qa[1]))
 	return jj
-	
+
+from core.keyMatrix import json_dumps_tuple_keys
+from core.matrixController import json_loads_tuple_keys
+
+def doesThisWorkHere(grid, loc):
+	check = True
+	for i in orth(loc):
+		if (i in grid and check):
+			k = canPlaceAt(grid, i)
+			#print(k)
+			if (k is not False and len(k) == 0):
+				#print("Neighbour cannot be placed")
+				#rb = wtp.rollback()
+				return False
+	return True
+
+def getAR(grid):
+	# ive copied this code I could refactor it
+	sc = [None, None, None, None]
+	#print(grid)
+	be = wtp.getEdges(grid)
+	for i in be:
+			#print(i)
+			j = i
+			if (sc[0] is None or j[0] < sc[0]):
+				sc[0]= j[0]
+			if (sc[2] is None or j[0] > sc[2]):
+				sc[2]= j[0]
+			if (sc[1] is None or j[1] < sc[1]):
+				sc[1]= j[1]
+			if (sc[3] is None or j[1] > sc[3]):
+				sc[3]= j[1]
+			#print(j)
+	if (sc[0] is None):
+		return 1
+	sz = [sc[2]-sc[0]+1, sc[3]-sc[1]+1]
+	#print(sz)
+	if (sz[1] == 0):
+		return 1
+	return sz[0]/sz[1]
 class wangTilePlacer():
-	def __init__(self, save_point = ".", stack_size = 0):
-		self.save_point = save_point.rstrip("/")
-		self.ma = mc(self.save_point + "/wang")
-		self.oState = mc(self.save_point + "/wang/oState")
+	def __init__(self, stack_size = 0):
+		self.ma = mc("wang")
 		self.stack = []
 		self.edges = [(0,0)]
 	
-		if (os.path.exists("wang/saves/edges.dat")):
-			self.edges = json.load(open("wang/saves/edges.dat", "r"))
+		#if (os.path.exists("wang/saves/edges.dat")):
+		#	self.edges = json.load(open("wang/saves/edges.dat", "r"))
 
-		if (os.path.exists("wang/saves/stack.dat")):
-			self.stack = json.load(open("wang/saves/stack.dat", "r"))
-	
-	def save(self):
-		k = self.ma.matrices.keys()
-		for i in list(k):
-			self.ma.matrices[i].clean()
-		self.ma.save()
-		for i in self.oState.matrices.keys():
-			self.oState.matrices[i].clean()
-		self.oState.save()
+		#if (os.path.exists("wang/saves/stack.dat")):
+		#	self.stack = json.load(open("wang/saves/stack.dat", "r"))
 
-		
-	def size(self):
-		x= 0
-		for i,j in self.ma.matrices.items():
-			
-			#print(i,len(j.keys))
-			x+= len(j.keys)
-		return x
-		
 	def place(self, where, what, anc = {}):
 		ty = []
 		#if (where not in self.edges):
@@ -287,8 +322,12 @@ class wangTilePlacer():
 		#print(self.edges)
 		return True
 		
-	def unplace(self, where):
-		self.ma.set(*where, None)
+	def unplace(self, grid, where):
+		if (where in grid):
+			grid.remove(where)
+			return True
+		return False
+		
 		if (where not in self.edges):
 			self.edges.append(where)
 		for i in orth(where):
@@ -301,76 +340,216 @@ class wangTilePlacer():
 					print("Remove",i)
 					self.edges.remove(i)
 		return True
+	
+	def getEdges(self, grid):
+		j = []
+		for i in grid.keys():
+			for k in orth(i):
+				if (k not in j and k not in grid):
+					j.append(k)
+			if (i in j):
+				j.remove(i)
+		return j
+			
+	def step(self, grid):
+		if (len(grid) == 0):
+			edge = [(0,0)]
+		else:
+			edge = self.getEdges(grid)
 		
-	def rollback(self):
-		#print("Rollback")
-		if (len(self.stack) == 0):
-			print("NONONO")
-			showWorkings({"selected" : [d['loc']], "rbs": rb_mapping_list}).save("wang/preStackCrash.png")
-			#print(workings)
-		i = self.stack.pop()
-		self.unplace(i[0])
-		return i
+		#print(edge)
+		
+		d = None
+		ls = []
+		for i in edge:
+			#p = (len(canPlaceAt(gr, i)))
+			p = (abs(i[0]) + abs(i[1]))
+			if (d is None or (p >= 0 and p < d)):
+				d = p
+				ls = [i]
+			elif (p == d):
+				ls.append(i)
+		
+		d = None
+		lls = []
+		for i in ls:
+			p = (len(canPlaceAt(gr, i)))
+			#p = (abs(i[0]) + abs(i[1]))
+			if (d is None or (p > 0 and p < d)):
+				d = p
+				lls = [i]
+			elif (p == d):
+				lls.append(i)
+		#print(d, ls)
+		
+		r = random.choice(lls)
+		#print("r:",r)
+		
+		d = canPlaceAt(grid, r)
 
-	def rollbackTo(self, thesePoints = []):
-		print("=== Start rollback ===")
-		#print(thesePoints,"\n")
-		rblist = []
-		satisfied = False
-		while (satisfied is False):
-			rbclock = None # rollback clock to tell us where we are
-			p = None
-			while ((rbclock not in thesePoints)) :# or (p is None or len(p[2]) == 0)):
-				#print("This should run at least once")
-				#print(thesePoints)
-				p = self.rollback()
-				#print(len(p[2]), tuple(p[0]), thesePoints, tuple(p[0]) in thesePoints)
-				rbclock = tuple(p[0])
-				rblist.append(p)
-			print("Complete")
-			satisfied = True
-			#print(p[2])
-			if (len(p[2]) == 0):
-				print ("Not satisfied")
-				satisfied = False
-				thesePoints = orth(p[0])
-		return rblist
+		out = []
+		for i in d:
+			x = grid.copy()
+			x[r] = i
+			#print(doesThisWorkHere(grid, r))
+			if (doesThisWorkHere(grid, r)):
+				#print("Grid works")
+				out.append(x)
+			else:
+				print("Grid dropped")
+		
+		return out
+
+#p = [1,2,3,3,4,5]
+#first = p[:3]
+#print(p)
+#n=1
+#print(p[:n], p[n:])
+#exit()
+
+if (os.path.exists("wang/saves/grids.dat")):
+	grids_init = [{}]#json.load(open("wang/saves/grids.dat", "r"))
+	grids_in =[]
+	#for i in grids_init:
+	#	grids_in.append(json_loads_tuple_keys(i))
+else:
+	grids_in =[{}]
 	
 wtp = wangTilePlacer()
 ma = wtp.ma
 
-def makeTiles(num):
-	tiles = []
-	for i in range(num):
-		tile = {}
-		for j in tile_sides:
-			tile[j] = random.choice(list(cols.keys()))
-		tiles.append(tile)
-	return tiles
+def splitGrids(grid, split = 10000):
+	return grid[:split], grid[split:]
 	
-tiles = ofdc + specialTiles(1)
-#print("Placing",len(tiles),"tiles.")
-prb = True
-qwik = False
-
-def doesThisWorkHere(loc):
-	global workings
-	check = True
-	for i in orth(loc):
-		j = i
-		if (wtp.ma.get(*j) is None and check):
-			k = canPlaceAt(j)
-			#print(wtp.ma.get(*j))
-			#showWorkings({"selected" : [d['loc']], "rbs": rb_mapping_list}).save("wang/workingsOut-" + str(workings) + ".png")
-			#print(workings)
-			#workings += 1
+class gridManager():
+	def __init__(self):
+		self.grids = {}
+		self.path = "wang/saves/"
+		
+	def load(self, grid):
+		if (grid in self.grids):
+			#print("Grid already loaded")
+			return False
 			
-			if (len(k) == 0):
-				#print("Neighbour cannot be placed")
-				#rb = wtp.rollback()
-				check = False
-	return check
+		if (os.path.exists(self.path + "grids-" + str(grid) + ".dat")):
+			grid_loader = json.load(open(self.path+"grids-"+str(grid)+".dat", "r"))
+			self.grids[grid] = []
+			for i in grid_loader:
+				self.grids[grid].append(json_loads_tuple_keys(i))
+			return True
+		else:
+			print("No such file")
+			return False
+			
+	def findAllGrids(self):
+		c=0
+		
+		while(os.path.exists("wang/saves/grids-"+str(c)+".dat") or c in self.grids):
+			c+= 1
+		return c
+
+	def saveAll(self):
+		for i,j in self.grids.items():
+			out = []
+			for k in j:
+				out.append(json_dumps_tuple_keys(k, True))
+			json.dump(out, open("wang/saves/grids-"+str(i)+".dat", "w"))
+
+	def appendMany(self, these):
+		c=0
+		while (len(these) > 0):
+			if (c in self.grids):
+				b = len(self.grids[c])
+			else:
+				if (self.load(c)):
+					b = len(self.grids[c])
+				else:
+					if (c in self.grids):
+						b = len(self.grids[c])
+					else:
+						print("Grid made")
+						self.grids[c] = []
+						b = 0
+		
+			a,these= splitGrids(these, 10000-b)
+			self.grids[c] += a
+			
+	def listGridSizes(self):
+		d = {}
+		for i in range(self.findAllGrids()):
+			
+			self.load(i)
+			d[i] = len(self.grids[i])
+		return d
+		
+grids_out = []
+
+gm = gridManager()
+#gm.grids[0] = [{}]
+print(gm.findAllGrids())
+gm.load(0)
+print(list(gm.listGridSizes().keys()))
+
+if (0 not in list(gm.listGridSizes().keys())):
+	print("No")
+	gm.grids[0] = [{}]
+
+#print(gm.grids)
+#print(gm.listGridSizes())
+tileMax = None
+x=0
+ct = 0
+tot=100
+while (ct < tot and gm.listGridSizes()[0] > 0 ):
+	for i in range(gm.listGridSizes()[0]):
+		ign = False
+		gr = gm.grids[0].pop()
+		for i in wtp.getEdges(gr):
+			p = (len(canPlaceAt(gr, i)))
+			if (p == 0):
+				ign = True
+				break
+		if (ign):
+			if (tileMax is None or len(gr) > tileMax):
+				tileMax = len(gr) 
+				print("Saved fail", tileMax)
+				showWorkings(gr, {}).save("wang/saves/failed-" + str(tileMax)+".png")
+			pass
+		#	print("I'm ignoring this grid as it is impossible")
+		else:
+			#d = getAR(gr)
+			#if (d> 5 or d < 0.2):
+				#print("d:",d)
+				#print("Grid aspect ratio too stretched")
+			#else:
+			gm.appendMany(wtp.step(gr))
+		x+=1
+	ct+=1
+	if (ct%10==0):
+		print(x, ct, timely(start, datetime.now(), ct, tot))
+		#print(ct)
+
+imageTileGrid(gr, (-32, -32), (64, 64)).save("wang/saves/help.png")
 	
+print(gm.listGridSizes())
+#def saveAllGrids(grids):
+#	c=0
+#	if (os.path.exist)
+gm.saveAll()
+exit()
+
+
+#p,q = splitGrids(grids_in)
+
+#json.dump(p, open("wang/saves/grids.dat", "w"))
+#json.dump(q, open("wang/saves/grids-next.dat", "w"))
+
+print(len(final),"grids")
+
+print("Done?")
+
+tiles = specialTiles(1)
+
 def gat(tile = (0,0)):
 	k = tt.copy() # All the tiles
 	tht = ma.get(*tile)
@@ -395,7 +574,7 @@ workings = 0
 
 def down(point = None):
 	global workings
-	#print("Down Command")
+	print("Down Command")
 	if (point is None):
 		
 		op = buildExpectations()
@@ -417,12 +596,12 @@ def down(point = None):
 	#workings += 1
 	
 	ls = canPlaceAt(t_loc)
-	#print("Can place",len(ls),"tiles at",t_loc)
+	print("Can place",len(ls),"tiles at",t_loc)
 	random.shuffle(ls)
 	rb = None
 	while (len(ls) > 0):
 		i = ls.pop(0)
-		#print("Trying",i,"at",t_loc,"with",len(ls),"others.")
+		print("Trying",i,"at",t_loc,"with",len(ls),"others.")
 		if (not pig(i, t_loc)):
 			print("What's happened?")
 			exit()
@@ -433,13 +612,89 @@ def down(point = None):
 			j = i
 			if (wtp.ma.get(*j) is None and check):
 				if (len(canPlaceAt(j)) == 0):
-					#print("Neighbour cannot be placed")
+					print("Neighbour cannot be placed")
 					rb = wtp.rollback()
 					check = False
 		if (check):
 			return {"ret":True, "loc":t_loc, "rb" : rb}
 	return {"ret": False, "loc":t_loc, "rb": rb}
-sz = wtp.oState.size()
+
+def placeTile():
+	rblist = []
+	op = down()
+	#if op return is true, item has been placed, otherwise no
+	print(op)
+	if (not op["ret"]):
+		if (op['rb'] is None):
+			print(op)
+			exit()		
+		rblist.append(op['rb'])
+		satisfied = False
+		jorth = orth(op["loc"])
+		supersatisfied = False
+		while (supersatisfied is False):
+			
+			rblist += wtp.rollbackTo(jorth)
+			print("RBList is now:", rblist)
+			print("=== RIGHT ===")
+			print("Tried", op["loc"])
+			print("Removed these:")
+			for i in rblist:
+				print(i)
+			#print("rbclock is",rbclock)
+			print("===")
+		
+			#print(wtp.stack)
+		
+			p = rblist.pop()
+			print(p)
+			p[1] = p[2].pop() # It should have something, but should check
+			wtp.place(p[0], p[1], p[2])
+		
+#			print("=== list ===")
+#			for i in rblist:
+#				print(i)
+			while (len(rblist) > 0):
+				p = rblist.pop()
+				if (pig(p[1], p[0])):
+					wtp.place(p[0], p[1], p[2])
+					success = True
+				elif (len(p[2]) > 0):
+					success = False
+					while (len(p[2]) > 0):
+						p[1] = p[2].pop(0)
+						if (pig(p[1], p[0])):
+							wtp.place(p[0], p[1], p[2])
+							success = True
+							break
+				else:
+					success = False
+					#raise Exception("F05: Now. What do I do here?")
+				supersatisfied = True
+				if (success is False):
+					x = canPlaceAt(p[0])
+					if (len(x) == 0):
+						#Ooh! Shove all this in supersatisfied and call it false!
+						#raise Exception("F03: Okay this isnt working")
+						jorth = orth(p[0])
+						print("We need to dig a little further!")
+						supersatisfied = False
+						break
+					else:
+						dp = down(p[0])
+						if (not dp["ret"]):
+							if (dp['rb'] is None):
+								print(db)
+								exit()
+
+							rblist.append(dp['rb'])
+							supersatisfied = False
+							jorth = orth(p[0])
+							break
+							#raise Exception("F04: This is legitimate panic time")
+			print("RBList is still:", rblist)
+				
+		return
 
 def placeTiles(tiles, quick = True):
 	for i in range(10):
@@ -458,8 +713,8 @@ def placeTiles(tiles, quick = True):
 		ti+= 1
 		print("Tile " + str(ti) + "!")
 		ch_ti = tiles.pop(random.randrange(len(tiles)))
-		#if (len(tiles) % 100 == 0):
-			#print(len(tiles))
+		if (len(tiles) % 100 == 0):
+			print(len(tiles))
 		nn=0
 		ls = []
 		#print("Hello?!", y)
@@ -536,8 +791,6 @@ def placeTiles(tiles, quick = True):
 			discarded.append(ch_ti)
 	return discarded
 	
-class stack(list):
-	pass
 # Let's do this once and for all
 
 def canima(loc, ls):
@@ -555,198 +808,14 @@ def canima(loc, ls):
 				placed = True
 				grid_changed = True
 				# Let's make a picture!
-				#showWorkings({"selected" : [d['loc']], "rbs": rb_mapping_list, "focus": [loc]}).save("wang/workingsOut-" + str(workings) + ".png")
-				#workings += 1
+				showWorkings({"selected" : [d['loc']], "rbs": rb_mapping_list, "focus": [loc]}).save("wang/workingsOut-" + str(workings) + ".png")
+				workings += 1
 				break
 			else:
 				wtp.rollback()
 
 	return placed
 
-def do():
-	d = down()
-	#print("Result is:", d)
-	
-	if (d['ret'] is False):
-		x = wtp.rollback()
-		#print("===")
-		#print(x)
-		while (len(x[2]) ==0):
-			x = wtp.rollback()
-			#print(x)
-		x[1] = x[2].pop(0)
-		wtp.place(x[0],x[1],x[2])
-		
-	return 
-	
-	raise Exception("Do not work")
-	global workings, rb_mapping_list
-	print("Let's do this")
-	print("Initial depth down...")
-
-	
-	#showWorkings({"selected" : [d['loc']]}).save("wang/workingsOut-" + str(workings) + ".png")
-	#workings += 1
-	
-	# This is all good until d['ret'] returns False, which means all objects in this entry have returned unworkable
-	if (0):
-	
-		rbstack = [] # The rollback stack
-		print("We need to rollback from this point")
-		rbstack.append(d['rb'])	# rb SHOULD be ONLY not be None if ret is False
-		stack = orth(d['loc']) # Prepare for rollback!
-		#rb_core_answer = []
-		
-		satisfied = False
-		rb_mapping_list = []
-		while (not satisfied):
-			rb_core_answer = wtp.rollbackTo(stack)
-			#print(rb_core_answer)
-			
-			for i in rb_core_answer:
-				rbstack.append(i)
-				#print("Adding",i[0],"@ 5")
-				rb_mapping_list.append(i[0])
-			#showWorkings({"selected" : [d['loc']], "rbs": rb_mapping_list}).save("wang/workingsOut-" + str(workings) + ".png")
-			#workings += 1
-			
-			grid_changed = False
-			while (len(rbstack) > 0):	# Run through all the tiles and add them back
-				satisfied = True
-				a = rbstack.pop()
-				qo = []
-				for i in rbstack:
-					qo.append(str(i[0]))
-				#print(len(rbstack), ", ".join(qo))
-				#print(a)
-				#e = input('Check:')
-				# NOT JUST YET
-				#showWorkings({"selected" : [d['loc']], "rbs": rb_mapping_list, "focus": [a[0]]}).save("wang/workingsOut-" + str(workings) + ".png")
-				#workings += 1
-				# a[1] is current value, this should be valid but not correct
-				if (len(a[2]) > 0):
-					#print("a[2] is", a[2])
-					# This is a list of new values to try. If these pass, then let the whole loop continue
-					if (grid_changed):
-						tsa = False # Try Something Else
-						# Try current answer again, then try re-running canPlaceAt without current answer
-						if (pig(a[1], a[0])):
-							print("Pig passed")
-							wtp.place(a[0], a[1], a[2])
-							if (doesThisWorkHere(a[0])):
-								print("This worked")
-								placed = True
-								grid_changed = True
-								# Let's make a picture!
-								#÷showWorkings({"selected" : [d['loc']], "rbs": rb_mapping_list, "focus": [a[0]]}).save("wang/workingsOut-" + str(workings) + ".png")
-								#workings += 1
-							else:
-								tsa = True
-								wtp.rollback()
-						else:
-							print("Pig failed")
-							tsa = True
-							
-						if (tsa):
-							y = canPlaceAt(a[0])
-							if (len(y) == 0):
-								raise Exception("F05A: What now?") # But I've not written that yet
-							else:
-								#raise Exception("F05B: Stopped here, querying this code")
-								placed = canima(a[0], y)
-								
-								if (placed is False):
-									#print("Adding",a[0],"@ 4")
-									rbstack.append([a[0], [], []])
-									stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
-									satisfied = False
-									break
-								#elif (placed is False and grid_changed is True):
-								#	raise Exception("F06: Do something else?")
-								else:
-									grid_changed = True
-									
-						#raise Exception("F01: Success, carry on") # But I've not written that yet
-					else:
-						placed = False
-						print("Grid unchanged")
-						while (len(a[2]) > 0):
-							a[1] = a[2].pop()
-							print("Try placing",a[1])
-							if (pig(a[1], a[0])):
-								print("Pig passed")
-								wtp.place(a[0], a[1], a[2])
-								if (doesThisWorkHere(a[0])):
-									print("This worked")
-									placed = True
-									grid_changed = True
-									break
-								else:
-									wtp.rollback()
-						if (placed is False):
-							#raise Exception("F07A: Do we need to rollback? Again??")
-							#print("Adding",a[0],"@ 3")
-							rbstack.append([a[0], [], []])
-							stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
-							satisfied = False
-							break # This will break the rb_core_answer loop as desired
-						else:
-							grid_changed = True
-				else:
-					# This is where the heartache starts: 
-					if (grid_changed):
-						# If the grid has changed, then we should re-run canPlaceAt, exclude a[1] from this list and cycle?
-						y = canPlaceAt(a[0])
-						#print("Is there something here?",a[0],wtp.ma.get(*a[0]), y)
-						if (len(y) == 0):
-							raise Exception("F05: What now?") # But I've not written that yet
-						else:
-							placed = canima(a[0], y)
-										
-							if (placed is False):
-								#print("Adding",a[0],"@ 1")
-								rbstack.append([a[0], [], []])
-								stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
-								satisfied = False
-								break
-							else:
-								grid_changed = True
-						#	raise Exception("F02: Eh? I'm here and the grid's not changed!") # But I've not written that yet
-					else:
-						# If the grid has NOT changed, and the length of remaining a is 0 then we should rollback further with THIS tile as the orth
-						#print("Adding",a[0],"@ 2")
-						rbstack.append([a[0], [], []]) # This bit of code again?
-						stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
-						satisfied = False
-						break
-						
-						raise Exception("F03: Unhandled this part") # But I've not written that yet
-				pass
-
-		# Did it get here?
-		showWorkings({"selected" : [d['loc']], "rbs": rb_mapping_list, "focus": [a[0]]}).save("wang/workingsOut-" + str(workings) + ".png")
-		workings += 1
-
-		#exit(1) # Fuck don't save it here!
-		
-	print("=" * 8)
-	print("Operation complete")
-	print(workings)
-
-if (__name__ == "__main__"):
-	for i in range(500):
-		if (i%100==0):
-			print(i)
-		do()
-		x = wtp.size()
-		if (x > sz):
-			sz=x
-			print(sz)
-			wtp.ma.clean()
-			wtp.oState.matrices = wtp.ma.matrices
-			#wtp.oState.clean()
-			showWorkings({}, False).save("wang/finished-"+str(sz)+".png")
-	
 if (__name__ == "__main__" and False):
 	discard = placeTiles(tiles, qwik)
 	
@@ -806,7 +875,7 @@ if (__name__ == "__main__" and False):
 
 if (__name__ == "__main__"):
 
-	wtp.save()
+	ma.save()
 	json.dump(discard, open("wang/saves/discards.dat", "w"))
 	json.dump(wtp.edges, open("wang/saves/edges.dat", "w"))
 	json.dump(wtp.stack, open("wang/saves/stack.dat", "w"))
