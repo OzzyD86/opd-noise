@@ -11,7 +11,13 @@ class keyMatrix():
 	def __init__(self):
 		self.size = 100
 		self.keys = {}
-		
+	
+	def clean(self):
+		k = self.keys.items()
+		for i,j in list(k):
+			if (j is None):
+				self.keys.pop(i) # this can be done right?
+			
 	def set(self,x,y,value):
 		self.keys[x,y] = value
 	
