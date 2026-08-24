@@ -499,7 +499,7 @@ if (0 not in list(gm.listGridSizes().keys())):
 tileMax = None
 x=0
 ct = 0
-tot=60
+tot=100
 while (ct < tot and gm.listGridSizes()[0] > 0 ):
 	for i in range(gm.listGridSizes()[0]):
 		ign = False

@@ -4,9 +4,10 @@ import wang
 import json, os
 import random
 from core.matrixController import json_loads_tuple_keys
+import core.deckGenerator
 #print("Here?!")
-field_size = 16
-p = wang.makeDistinctTiles(1)
+field_size = 9
+p = core.deckGenerator.tiles#wang.makeDistinctTiles(1)
 #p.remove({penrose.N:1,penrose.E:1,
 #	penrose.S:1,penrose.W:1})
 '''p = [
