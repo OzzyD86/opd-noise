@@ -292,11 +292,6 @@ class wangTilePlacer():
 
 	def rollbackTo(self, thesePoints = []):
 		print("=== Start rollback ===")
-		r = []
-		for i in thesePoints:
-			if (i not in r):
-				r.append(i)
-		thesePoints = r
 		#print(thesePoints,"\n")
 		rblist = []
 		satisfied = False
@@ -305,7 +300,7 @@ class wangTilePlacer():
 			p = None
 			while ((rbclock not in thesePoints)) :# or (p is None or len(p[2]) == 0)):
 	#			print("This should run at least once")
-				#print(thesePoints)
+				print(thesePoints)
 				p = self.rollback()
 				print(len(p[2]), p[0], thesePoints)
 				rbclock = tuple(p[0])
@@ -719,7 +714,7 @@ def do():
 								
 								if (placed is False):
 									rbstack.append([a[0], [], []])
-									stack = orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
+									stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
 									satisfied = False
 									break		
 								else:
@@ -744,7 +739,7 @@ def do():
 									wtp.rollback()'''
 						if (placed is False and grid_changed is False):
 							rbstack.append([a[0], [], []])
-							stack = orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
+							stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
 							satisfied = False
 							break # This will break the rb_core_answer loop as desired
 						elif (placed is False and grid_changed is True):
@@ -780,7 +775,7 @@ def do():
 										
 							if (placed is False):
 								rbstack.append([a[0], [], []])
-								stack = orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
+								stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
 								satisfied = False
 								break
 							else:
@@ -789,7 +784,7 @@ def do():
 					else:
 						# If the grid has NOT changed, and the length of remaining a is 0 then we should rollback further with THIS tile as the orth
 						rbstack.append([a[0], [], []]) # This bit of code again?
-						stack = orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
+						stack += orth(a[0])	# Unsure, but we should break if an item adjacent to any other chosen is selected?
 						satisfied = False
 						break
 						
