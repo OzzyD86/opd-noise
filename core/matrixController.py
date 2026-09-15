@@ -80,7 +80,11 @@ class matrixController():
 			print("New", self.getFilenameFor(m))
 			self.matrices[m] = keyMatrix()
 		self.loads += 1
-		
+	
+	def clean(self):
+		for i in self.matrices.keys():
+			self.matrices[i].clean()
+			
 	def get(self,x,y):
 		t = (x % 100, y % 100)
 		m = (x // 100, y // 100)
@@ -96,8 +100,16 @@ class matrixController():
 		
 		if (m not in self.matrices):
 			self.load(m)
-		
+		if (v is None and t in self.matrices[m].keys):
+			self.matrices[m].keys.pop(t)
 		self.matrices[m].set(t[0], t[1], v)
 		pass
-		
+
+	def size(self):
+		x= 0
+		for i,j in self.matrices.items():
+			
+			#print(i,len(j.keys))
+			x+= len(j.keys)
+		return x
 
